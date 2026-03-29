@@ -47,22 +47,12 @@ jobs:
           pip install --upgrade pip
           pip install cython==0.29.36 buildozer
 
-      # 🔧 Initialize (fix for missing python-for-android error)
-      - name: Initialize Buildozer
-        run: |
-          buildozer init || true
-
-      # 🧹 Clean old broken builds
-      - name: Clean Build
-        run: |
-          buildozer android clean
-
       # 🔐 Decode keystore
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > mykeystore.keystore
 
-      # 🚀 Build APK
+      # 🚀 Build APK (FIRST TIME download + build)
       - name: Build APK
         run: |
           buildozer -v android release
@@ -80,7 +70,6 @@ jobs:
         run: |
           zipalign -v 4 bin/*.apk app-release.apk
 
-      # ⬇️ Upload
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
