@@ -2,12 +2,15 @@ name: Build APK (Signed)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04   # 🔥 IMPORTANT FIX
+    runs-on: ubuntu-22.04
+
+    env:
+      BUILDOZER_ALLOW_ROOT: 1
 
     steps:
       - name: Checkout code
@@ -18,7 +21,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt install -y \
@@ -39,23 +42,32 @@ jobs:
             unzip \
             openjdk-17-jdk
 
-      - name: Install Buildozer
+      - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install buildozer cython==0.29.36
+          pip install cython==0.29.36 buildozer
 
-      - name: Clean previous builds
-        run: buildozer android clean
+      # 🔧 Initialize (fix for missing python-for-android error)
+      - name: Initialize Buildozer
+        run: |
+          buildozer init || true
 
-      # 🔐 Decode Keystore (IMPORTANT)
+      # 🧹 Clean old broken builds
+      - name: Clean Build
+        run: |
+          buildozer android clean
+
+      # 🔐 Decode keystore
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > mykeystore.keystore
 
+      # 🚀 Build APK
       - name: Build APK
         run: |
           buildozer -v android release
 
+      # 🔏 Sign APK
       - name: Sign APK
         run: |
           jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
@@ -63,10 +75,12 @@ jobs:
           -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
           bin/*.apk ${{ secrets.KEY_ALIAS }}
 
+      # 📦 Align APK
       - name: Zipalign APK
         run: |
           zipalign -v 4 bin/*.apk app-release.apk
 
+      # ⬇️ Upload
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
