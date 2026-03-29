@@ -2,49 +2,73 @@ name: Build APK (Signed)
 
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04   # 🔥 IMPORTANT FIX
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: 3.10
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install buildozer cython
-
-      - name: Install system packages
-        run: |
           sudo apt update
-          sudo apt install -y zip unzip openjdk-17-jdk \
-          autoconf libtool pkg-config zlib1g-dev \
-          libncurses5-dev libncursesw5-dev libtinfo6 \
-          cmake libffi-dev libssl-dev
+          sudo apt install -y \
+            build-essential \
+            libffi-dev \
+            libssl-dev \
+            python3-dev \
+            zlib1g-dev \
+            libncurses5 \
+            libncurses5-dev \
+            libtinfo5 \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            git \
+            zip \
+            unzip \
+            openjdk-17-jdk
 
-      # 🔐 Decode keystore from secrets
+      - name: Install Buildozer
+        run: |
+          pip install --upgrade pip
+          pip install buildozer cython==0.29.36
+
+      - name: Clean previous builds
+        run: buildozer android clean
+
+      # 🔐 Decode Keystore (IMPORTANT)
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" > keystore.txt
-          base64 --decode keystore.txt > mykeystore.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > mykeystore.keystore
 
-      # 🚀 Build signed APK
       - name: Build APK
         run: |
-          buildozer android release
+          buildozer -v android release
 
-      # 📦 Upload APK
+      - name: Sign APK
+        run: |
+          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
+          -keystore mykeystore.keystore \
+          -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
+          bin/*.apk ${{ secrets.KEY_ALIAS }}
+
+      - name: Zipalign APK
+        run: |
+          zipalign -v 4 bin/*.apk app-release.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RC-Controller-APK
-          path: bin/*.apk
+          path: app-release.apk
