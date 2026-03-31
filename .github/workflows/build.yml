@@ -65,7 +65,7 @@ jobs:
       # Build signed APK (Buildozer handles signing)
       - name: Build APK
         run: |
-          buildozer android clean
+          
           buildozer -v android release
 
       # Rename APK
