@@ -16,7 +16,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ✅ Python fix
+      # ✅ Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -44,11 +44,11 @@ jobs:
             unzip \
             openjdk-17-jdk
 
-      # ✅ FORCE Java 17 (VERY IMPORTANT FIX)
+      # ✅ FIXED Java path
       - name: Set Java 17
         run: |
-          echo "JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64" >> $GITHUB_ENV
-          echo "PATH=/usr/lib/jvm/temurin-17-jdk-amd64/bin:$PATH" >> $GITHUB_ENV
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          echo "PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH" >> $GITHUB_ENV
 
       # ✅ Python deps
       - name: Install Python dependencies
@@ -61,23 +61,23 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > mykeystore.keystore
 
-      # 🚀 Build APK (no clean step here!)
+      # 🚀 Build APK
       - name: Build APK
         run: |
           buildozer -v android release
 
-      # 🔏 Sign APK
+      # 🔏 Sign APK (UPDATED SECURE)
       - name: Sign APK
         run: |
-          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
           -keystore mykeystore.keystore \
           -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
           bin/*.apk ${{ secrets.KEY_ALIAS }}
 
-      # 📦 Align APK
+      # 📦 Zipalign (FIXED 🔥)
       - name: Zipalign APK
         run: |
-          zipalign -v 4 bin/*.apk app-release.apk
+          $HOME/.buildozer/android/platform/android-sdk/build-tools/*/zipalign -v 4 bin/*.apk app-release.apk
 
       # ⬇️ Upload APK
       - name: Upload APK
