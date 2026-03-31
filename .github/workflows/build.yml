@@ -16,13 +16,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ✅ Python
+      # Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # ✅ System dependencies
+      # System dependencies
       - name: Install system dependencies
         run: |
           sudo apt update
@@ -44,42 +44,36 @@ jobs:
             unzip \
             openjdk-17-jdk
 
-      # ✅ FIXED Java path
+      # Java path
       - name: Set Java 17
         run: |
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
           echo "PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH" >> $GITHUB_ENV
 
-      # ✅ Python deps
+      # Python deps
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
           pip install cython==0.29.36 buildozer
 
-      # 🔐 Decode keystore
+      # Decode keystore
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > mykeystore.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > mykeystore.keystore
+          ls -l mykeystore.keystore
 
-      # 🚀 Build APK
+      # Build signed APK (Buildozer handles signing)
       - name: Build APK
         run: |
+          buildozer android clean
           buildozer -v android release
 
-      # 🔏 Sign APK (UPDATED SECURE)
-      - name: Sign APK
+      # Rename APK
+      - name: Rename APK
         run: |
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-          -keystore mykeystore.keystore \
-          -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
-          bin/*.apk ${{ secrets.KEY_ALIAS }}
+          cp bin/*.apk app-release.apk
 
-      # 📦 Zipalign (FIXED 🔥)
-      - name: Zipalign APK
-        run: |
-          $HOME/.buildozer/android/platform/android-sdk/build-tools/*/zipalign -v 4 bin/*.apk app-release.apk
-
-      # ⬇️ Upload APK
+      # Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
