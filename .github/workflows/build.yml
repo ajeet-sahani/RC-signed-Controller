@@ -16,11 +16,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ✅ Python fix
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
+      # ✅ System dependencies
       - name: Install system dependencies
         run: |
           sudo apt update
@@ -42,6 +44,13 @@ jobs:
             unzip \
             openjdk-17-jdk
 
+      # ✅ FORCE Java 17 (VERY IMPORTANT FIX)
+      - name: Set Java 17
+        run: |
+          echo "JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64" >> $GITHUB_ENV
+          echo "PATH=/usr/lib/jvm/temurin-17-jdk-amd64/bin:$PATH" >> $GITHUB_ENV
+
+      # ✅ Python deps
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
@@ -52,7 +61,7 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > mykeystore.keystore
 
-      # 🚀 Build APK (FIRST TIME download + build)
+      # 🚀 Build APK (no clean step here!)
       - name: Build APK
         run: |
           buildozer -v android release
@@ -70,6 +79,7 @@ jobs:
         run: |
           zipalign -v 4 bin/*.apk app-release.apk
 
+      # ⬇️ Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
